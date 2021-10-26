@@ -213,7 +213,7 @@ namespace MathLibrary
                 matrix.M00 = fAspectRatio * fFovRad;
                 matrix.M11 = fFovRad;
                 matrix.M22 = fFar / (fFar - fNear);
-                matrix.M33 = (-fFar * fNear) / (fFar - fNear);
+                matrix.M32 = (-fFar * fNear) / (fFar - fNear);
                 matrix.M23 = 1.0f;
                 matrix.M33 = 0.0f;
                 return matrix;
@@ -389,6 +389,12 @@ namespace MathLibrary
                 return Vec_Add(lineStart, lineToIntersect);
             }
 
+            private static float dist(Vec3D plane_p, Vec3D plane_n, Vec3D p)
+            {
+                Vec3D n = MathOps.Vec_Normalize(p);
+                return (plane_n.X * p.X + plane_n.Y * p.Y + plane_n.Z * p.Z - MathOps.Vec_DotProduct(plane_n, plane_p));
+
+            }
             public static int Triangle_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, Triangle in_tri, ref Triangle out_tri1, ref Triangle out_tri2)
             {
                 // Make sure plane normal is indeed normal
@@ -401,13 +407,20 @@ namespace MathLibrary
                 out_tri1.t[2] = in_tri.t[2];
                 out_tri2.t[2] = in_tri.t[2];
 
+                out_tri1.col[0] = in_tri.col[0];
+                out_tri2.col[0] = in_tri.col[0];
+                out_tri1.col[1] = in_tri.col[1];
+                out_tri2.col[1] = in_tri.col[1];
+                out_tri1.col[2] = in_tri.col[2];
+                out_tri2.col[2] = in_tri.col[2];
+
                 // Return signed shortest distance from point to plane, plane normal must be normalised
-                Vec3D n0 = Vec_Normalize(in_tri.p[0]);
-                float d0 = (plane_n.X * n0.X + plane_n.Y * n0.Y + plane_n.Z * n0.Z - Vec_DotProduct(plane_n, plane_p));
-                Vec3D n1 = Vec_Normalize(in_tri.p[1]);
-                float d1 = (plane_n.X * n1.X + plane_n.Y * n1.Y + plane_n.Z * n1.Z - Vec_DotProduct(plane_n, plane_p));
-                Vec3D n2 = Vec_Normalize(in_tri.p[2]);
-                float d2 = (plane_n.X * n2.X + plane_n.Y * n2.Y + plane_n.Z * n2.Z - Vec_DotProduct(plane_n, plane_p));
+                float d0 = dist(plane_p, plane_n, in_tri.p[0]);
+                float d1 = dist(plane_p, plane_n, in_tri.p[1]);
+                float d2 = dist(plane_p, plane_n, in_tri.p[2]);
+
+                Console.WriteLine("d0: " + d0.ToString() + "  d1: " + d1.ToString() + "  d2: " + d2.ToString());
+
 
                 Vec3D[] inside_pts = new Vec3D[3];
 
@@ -417,27 +430,45 @@ namespace MathLibrary
                 Vec3D[] outside_points = new Vec3D[3]; int nOutsidePointCount = 0;
                 Vec2D[] inside_tex = new Vec2D[3]; int nInsideTexCount = 0;
                 Vec2D[] outside_tex = new Vec2D[3]; int nOutsideTexCount = 0;
+                Pixel[] inside_color = new Pixel[3]; int nInsideColorCount = 0;
+                Pixel[] outside_color = new Pixel[3]; int nOutsideColorCount = 0;
 
-                if (d0 >= 0) { inside_points[nInsidePointCount++] = in_tri.p[0]; inside_tex[nInsideTexCount++] = in_tri.t[0]; }
+
+                if (d0 >= 0) { 
+                    inside_points[nInsidePointCount++] = in_tri.p[0]; 
+                    inside_tex[nInsideTexCount++] = in_tri.t[0];
+                    inside_color[nInsideColorCount++] = in_tri.col[0];
+                }
                 else
                 {
-                    outside_points[nOutsidePointCount++] = in_tri.p[0]; outside_tex[nOutsideTexCount++] = in_tri.t[0];
+                    outside_points[nOutsidePointCount++] = in_tri.p[0]; 
+                    outside_tex[nOutsideTexCount++] = in_tri.t[0];
+                    outside_color[nOutsideColorCount++] = in_tri.col[0];
+
                 }
                 if (d1 >= 0)
                 {
-                    inside_points[nInsidePointCount++] = in_tri.p[1]; inside_tex[nInsideTexCount++] = in_tri.t[1];
+                    inside_points[nInsidePointCount++] = in_tri.p[1]; 
+                    inside_tex[nInsideTexCount++] = in_tri.t[1];
+                    inside_color[nInsideColorCount++] = in_tri.col[1];
                 }
                 else
                 {
-                    outside_points[nOutsidePointCount++] = in_tri.p[1]; outside_tex[nOutsideTexCount++] = in_tri.t[1];
+                    outside_points[nOutsidePointCount++] = in_tri.p[1]; 
+                    outside_tex[nOutsideTexCount++] = in_tri.t[1];
+                    outside_color[nOutsideColorCount++] = in_tri.col[1];
                 }
                 if (d2 >= 0)
                 {
-                    inside_points[nInsidePointCount++] = in_tri.p[2]; inside_tex[nInsideTexCount++] = in_tri.t[2];
+                    inside_points[nInsidePointCount++] = in_tri.p[2]; 
+                    inside_tex[nInsideTexCount++] = in_tri.t[2];
+                    inside_color[nInsideColorCount++] = in_tri.col[2];
                 }
                 else
                 {
-                    outside_points[nOutsidePointCount++] = in_tri.p[2]; outside_tex[nOutsideTexCount++] = in_tri.t[2];
+                    outside_points[nOutsidePointCount++] = in_tri.p[2]; 
+                    outside_tex[nOutsideTexCount++] = in_tri.t[2];
+                    outside_color[nOutsideColorCount++] = in_tri.col[2];
                 }
 
                 // Now classify triangle points, and break the input triangle into 
@@ -474,20 +505,33 @@ namespace MathLibrary
                     // The inside point is valid, so keep that...
                     out_tri1.p[0] = inside_points[0];
                     out_tri1.t[0] = inside_tex[0];
+                    out_tri1.col[0] = inside_color[0];
 
                     // but the two new points are at the locations where the 
                     // original sides of the triangle (lines) intersect with the plane
+                    
                     float t;
                     out_tri1.p[1] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[0], out t);
                     out_tri1.t[1].X = t * (outside_tex[0].X - inside_tex[0].X) + inside_tex[0].X;
                     out_tri1.t[1].Y = t * (outside_tex[0].Y - inside_tex[0].Y) + inside_tex[0].Y;
                     out_tri1.t[1].Z = t * (outside_tex[0].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
+                    out_tri1.col[1].r = (byte)(t * (outside_color[0].r - inside_color[0].r) + inside_color[0].r);
+                    out_tri1.col[1].g = (byte)(t * (outside_color[0].g - inside_color[0].g) + inside_color[0].g);
+                    out_tri1.col[1].b = (byte)(t * (outside_color[0].b - inside_color[0].b) + inside_color[0].b);
+                    out_tri1.col[1].a = (byte)(t * (outside_color[0].a - inside_color[0].a) + inside_color[0].a);
+
+
+
                     out_tri1.p[2] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[1], out t);
                     out_tri1.t[2].X = t * (outside_tex[1].X - inside_tex[0].X) + inside_tex[0].X;
                     out_tri1.t[2].Y = t * (outside_tex[1].Y - inside_tex[0].Y) + inside_tex[0].Y;
                     out_tri1.t[2].Z = t * (outside_tex[1].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
+                    out_tri1.col[2].r = (byte)(t * (outside_color[1].r - inside_color[0].r) + inside_color[0].r);
+                    out_tri1.col[2].g = (byte)(t * (outside_color[1].g - inside_color[0].g) + inside_color[0].g);
+                    out_tri1.col[2].b = (byte)(t * (outside_color[1].b - inside_color[0].b) + inside_color[0].b);
+                    out_tri1.col[2].a = (byte)(t * (outside_color[1].a - inside_color[0].a) + inside_color[0].a);
                     return 1; // Return the newly formed single triangle
                 }
 
@@ -510,9 +554,11 @@ namespace MathLibrary
                     // intersects with the plane
                     out_tri1.p[0] = inside_points[0];
                     out_tri1.t[0] = inside_tex[0];
+                    out_tri1.col[0] = inside_color[0];
 
                     out_tri1.p[1] = inside_points[1];
                     out_tri1.t[1] = inside_tex[1];
+                    out_tri1.col[1] = inside_color[1];
 
                     float t;
                     out_tri1.p[2] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[0], out t);
@@ -520,17 +566,34 @@ namespace MathLibrary
                     out_tri1.t[2].Y = t * (outside_tex[0].Y - inside_tex[0].Y) + inside_tex[0].Y;
                     out_tri1.t[2].Z = t * (outside_tex[0].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
+                    out_tri1.col[2].r = (byte)(t * (outside_color[0].r - inside_color[0].r) + inside_color[0].r);
+                    out_tri1.col[2].g = (byte)(t * (outside_color[0].g - inside_color[0].g) + inside_color[0].g);
+                    out_tri1.col[2].b = (byte)(t * (outside_color[0].b - inside_color[0].b) + inside_color[0].b);
+                    out_tri1.col[2].a = (byte)(t * (outside_color[0].a - inside_color[0].a) + inside_color[0].a);
+
+
+
                     // The second triangle is composed of one of the inside points, a
                     // new point determined by the intersection of the other side of the 
                     // triangle and the plane, and the newly created point above
                     out_tri2.p[1] = inside_points[1];
                     out_tri2.t[1] = inside_tex[1];
+                    out_tri2.col[1] = inside_color[1];
+
                     out_tri2.p[0] = out_tri1.p[2];
                     out_tri2.t[0] = out_tri1.t[2];
+                    out_tri2.col[0] = out_tri1.col[2];
+
                     out_tri2.p[2] = Vec_IntersectPlane(plane_p, plane_n, inside_points[1], outside_points[0], out t);
                     out_tri2.t[2].X = t * (outside_tex[0].X - inside_tex[1].X) + inside_tex[1].X;
                     out_tri2.t[2].Y = t * (outside_tex[0].Y - inside_tex[1].Y) + inside_tex[1].Y;
                     out_tri2.t[2].Z = t * (outside_tex[0].Z - inside_tex[1].Z) + inside_tex[1].Z;
+
+                    out_tri2.col[2].r = (byte)(t * (outside_color[0].r - inside_color[1].r) + inside_color[1].r);
+                    out_tri2.col[2].g = (byte)(t * (outside_color[0].g - inside_color[1].g) + inside_color[1].g);
+                    out_tri2.col[2].b = (byte)(t * (outside_color[0].b - inside_color[1].b) + inside_color[1].b);
+                    out_tri2.col[2].a = (byte)(t * (outside_color[0].a - inside_color[1].a) + inside_color[1].a);
+
                     return 2; // Return two newly formed triangles which form a quad
                 }
 

@@ -5,8 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MathLibraryDriver"
         mc:Ignorable="d"
-        Title="MainWindow" Height="900" Width="900">
+        Title="MainWindow" Height="900" Width="900"
+        KeyDown="MainWindow_KeyDown"
+        >
     <Grid>
-        <Canvas Name="MainCanvas" Width="1500" Height="1500" Background="LightGray"/>
+        <Canvas Name="MainCanvas" Width="800" Height="800" Background="LightGray" />
     </Grid>
 </Window>
