@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using static MathLibrary.MathVectors;
-using DrawingHelpersLibrary;
 using System.Windows.Media;
 using System.Windows.Controls;
+using DrawingHelpersLibrary;
 
 namespace MathLibrary
 {
@@ -104,7 +104,7 @@ namespace MathLibrary
 
         public DrawingPipeline(Canvas c)
         {
-
+            m_CanvasContext = c;
         }
 
         public void SetProjection(float fFovDegrees, float fAspectRatio, float fNear, float fFar, float fLeft, float fTop, float fWidth, float fHeight)
@@ -129,18 +129,18 @@ namespace MathLibrary
 
 
 
-        public UInt32 Render(List<Triangle> triangles, RENDERFLAGS flags = RENDERFLAGS.RENDER_CULL_CW | RENDERFLAGS.RENDER_TEXTURED | RENDERFLAGS.RENDER_DEPTH)
+        public int Render(List<Triangle> triangles, RENDERFLAGS flags = RENDERFLAGS.RENDER_CULL_CW | RENDERFLAGS.RENDER_TEXTURED | RENDERFLAGS.RENDER_DEPTH)
         {
             return Render(triangles, flags, 0, triangles.Count);
         }
 
-        public UInt32 Render(List<Triangle> triangles, RENDERFLAGS flags, int nOffset, int nCount)
+        public int Render(List<Triangle> triangles, RENDERFLAGS flags, int nOffset, int nCount)
         {
             // Calculate Transformation MAtrix
             Mat4x4 matWorldView = MathOps.Mat_MultiplyMatrix(matWorld, matView);
 
             // Store triangles for rastering later
-            List<Triangle> vecTrianglesToRaster;
+ //           List<Triangle> vecTrianglesToRaster;
 
             int nTriangleDrawnCount = 0;
 
@@ -200,10 +200,11 @@ namespace MathLibrary
                                     nLightSources++;
                                     Vec3D light_dir = MathOps.Vec_Normalize(lights[i].dir);
                                     float light = MathOps.Vec_DotProduct(light_dir, normal);
-                                    if (light > 0)
-                                    {
-                                        int j = 0;
-                                    }
+
+                                    //if (light > 0)
+                                    //{
+                                    //    int j = 0;
+                                    //}
 
                                     light = Math.Max(light, 0.0f);
                                     nLightR += light * (lights[i].col.r / 255.0f);
@@ -228,7 +229,10 @@ namespace MathLibrary
                 // Clip triangle against near plane
                 int nClippedTriangles = 0;
                 Triangle[] clipped = new Triangle[2];
-                nClippedTriangles = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, 0.1f), new Vec3D(0.0f, 0.0f, 1.0f), triTransformed, clipped[0], clipped[1]);
+                clipped[0] = new Triangle();
+                clipped[1] = new Triangle();
+
+                nClippedTriangles = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, 0.1f), new Vec3D(0.0f, 0.0f, 1.0f), triTransformed, ref clipped[0], ref clipped[1]);
 
                 // This may yield two new triangles
                 for (int n = 0; n < nClippedTriangles; n++)
@@ -271,6 +275,8 @@ namespace MathLibrary
                     // a bunch of triangles, so create a queue that we traverse to 
                     //  ensure we only test new triangles generated against planes
                     Triangle[] sclipped = new Triangle[2];
+                    sclipped[0] = new Triangle();
+                    sclipped[1] = new Triangle();
                     List<Triangle> listTriangles = new List<Triangle>();
 
                     // Add initial triangle
@@ -296,19 +302,19 @@ namespace MathLibrary
                             {
                                 case 0:
                                     {
-                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, -1.0f, 0.0f), new Vec3D(0.0f, 1.0f, 0.0f), test, sclipped[0], sclipped[1]); break;
+                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, -1.0f, 0.0f), new Vec3D(0.0f, 1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]); break;
                                     }
                                 case 1:
                                     {
-                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, +1.0f, 0.0f), new Vec3D(0.0f, -1.0f, 0.0f), test, sclipped[0], sclipped[1]); break;
+                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, +1.0f, 0.0f), new Vec3D(0.0f, -1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]); break;
                                     }
                                 case 2:
                                     {
-                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(-1.0f, 0.0f, 0.0f), new Vec3D(1.0f, 0.0f, 0.0f), test, sclipped[0], sclipped[1]); break;
+                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(-1.0f, 0.0f, 0.0f), new Vec3D(1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]); break;
                                     }
-                                case 4:
+                                case 3:
                                     {
-                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(+1.0f, 0.0f, 0.0f), new Vec3D(-1.0f, 0.0f, 0.0f), test, sclipped[0], sclipped[1]); break;
+                                        nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(+1.0f, 0.0f, 0.0f), new Vec3D(-1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]); break;
                                     }
                             }
 
@@ -380,6 +386,7 @@ namespace MathLibrary
                     }
                 }
             }
+            return nTriangleDrawnCount;
         }
 
         //public UInt32 RenderLine(Vec3D p1, Vec3D p2, Pixel col)
@@ -462,7 +469,5 @@ namespace MathLibrary
             SolidColorBrush stroke = new SolidColorBrush(Color.FromArgb((byte)p.a, (byte)p.r, (byte)p.g, (byte)p.b));
             DrawingHelpers.DrawTriangle(m_CanvasContext, x1, y1, x2, y2, x3, y3, stroke);
         }
-
-
     }
 }

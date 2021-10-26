@@ -11,13 +11,34 @@ namespace MathLibrary
     {
         public class Vec2D
         {
-            public float X = 0;
-            public float Y = 0;
-            public float Z = 0;
+            public Vec2D()
+            {
+                X = 0;
+                Y = 0;
+                Z = 0;
+            }
+            public Vec2D(float x, float y, float z)
+            {
+                X = x;
+                Y = y;
+                Z = z;
+            }
+            public float X { get => v[0]; set { v[0] = value; } }
+            public float Y { get => v[1]; set { v[1] = value; } }
+            public float Z { get => v[2]; set { v[2] = value; } }
+
+            float[] v = new float[3] { 0, 0, 0};
         }
 
         public class Vec3D
         {
+            public Vec3D()
+            {
+                X = 0;
+                Y = 0;
+                Z = 0;
+                W = 0;
+            }
             public Vec3D(float x, float y, float z, float w = 1.0f)
             {
                 X = x;
@@ -79,6 +100,19 @@ namespace MathLibrary
             public Vec2D[] t { get; set; } = new Vec2D[3];
 
             public Pixel[] col { get; set; } = new Pixel[3];
+
+            public Triangle()
+            {
+                p[0] = new Vec3D();
+                p[1] = new Vec3D();
+                p[2] = new Vec3D();
+                t[0] = new Vec2D();
+                t[1] = new Vec2D();
+                t[2] = new Vec2D();
+                col[0] = new Pixel(120,120,120);
+                col[1] = new Pixel(120,120,120);
+                col[2] = new Pixel(120,120,120);
+            }
 
         }
 
@@ -273,7 +307,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_Add(Vec3D v1, Vec3D v2)
             {
-                Vec3D temp = new Vec3D();
+                Vec3D temp = new Vec3D(0.0f, 0.0f, 0.0f);
                 temp.X = v1.X + v2.X;
                 temp.Y = v1.Y + v2.Y;
                 temp.Z = v1.Z + v2.Z;
@@ -283,7 +317,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_Sub(Vec3D v1, Vec3D v2)
             {
-                Vec3D temp = new Vec3D();
+                Vec3D temp = new Vec3D(0.0f, 0.0f, 0.0f);
                 temp.X = v1.X - v2.X;
                 temp.Y = v1.Y - v2.Y;
                 temp.Z = v1.Z - v2.Z;
@@ -293,7 +327,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_Mul(Vec3D v1, float k)
             {
-                Vec3D temp = new Vec3D();
+                Vec3D temp = new Vec3D(0.0f, 0.0f, 0.0f);
                 temp.X = v1.X * k;
                 temp.Y = v1.Y * k;
                 temp.Z = v1.Z * k;
@@ -303,7 +337,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_Div(Vec3D v1, float k)
             {
-                Vec3D temp = new Vec3D();
+                Vec3D temp = new Vec3D(0.0f, 0.0f, 0.0f);
                 temp.X = v1.X / k;
                 temp.Y = v1.Y / k;
                 temp.Z = v1.Z / k;
@@ -323,7 +357,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_Normalize(Vec3D v)
             {
-                Vec3D temp = new Vec3D();
+                Vec3D temp = new Vec3D(0.0f, 0.0f, 0.0f);
                 float l = Vec_Length(v);
                 temp.X = v.X / l;
                 temp.Y = v.Y / l;
@@ -333,7 +367,7 @@ namespace MathLibrary
 
             public static Vec3D Vec_CrossProduct(Vec3D v1, Vec3D v2)
             {
-                Vec3D v = new Vec3D();
+                Vec3D v = new Vec3D(0.0f, 0.0f, 0.0f);
                 v.X = v1.Y * v2.Z - v1.Z * v2.Y;
                 v.Y = v1.Z * v2.X - v1.X * v2.Z;
                 v.Z = v1.X * v2.Y - v1.Y * v2.X;
@@ -346,13 +380,16 @@ namespace MathLibrary
                 float plane_d = -Vec_DotProduct(plane_n, plane_p);
                 float ad = Vec_DotProduct(lineStart, plane_n);
                 float bd = Vec_DotProduct(lineEnd, plane_n);
+
+                // TODO::  This blows up if bd = ad
                 t = (-plane_d - ad) / (bd - ad);
+
                 Vec3D lineStartToEnd = Vec_Sub(lineEnd, lineStart);
                 Vec3D lineToIntersect = Vec_Mul(lineStartToEnd, t);
                 return Vec_Add(lineStart, lineToIntersect);
             }
 
-            public static int Triangle_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, Triangle in_tri, Triangle out_tri1, Triangle out_tri2)
+            public static int Triangle_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, Triangle in_tri, ref Triangle out_tri1, ref Triangle out_tri2)
             {
                 // Make sure plane normal is indeed normal
                 plane_n = Vec_Normalize(plane_n);
