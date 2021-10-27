@@ -193,8 +193,11 @@ namespace MathLibrary
                 normal = MathOps.Vec_Normalize(normal);
 
                 // Cull triangles that face away from viewer
-                if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) > 0.0f)) continue;
-                if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CCW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) < 0.0f)) continue;
+                //if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) > 0.0f)) continue;
+                //if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CCW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) < 0.0f)) continue;
+
+
+
 
                 //// If lighting, calculate shading
                 //if (flags.HasFlag(RENDERFLAGS.RENDER_LIGHTS))
@@ -440,8 +443,6 @@ namespace MathLibrary
                                     Console.WriteLine(" -- 3: sclipped 1st p[2]:  " + sclipped[0].p[2].X + ", " + sclipped[0].p[2].Y + ", " + sclipped[0].p[2].Z);
                                     break;
                                 }
-
-
                         }
 
 //                        RasterSingleTriangle(test);

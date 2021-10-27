@@ -26,19 +26,19 @@ namespace MathLibraryDriver
             ObjectList = new List<Triangle>();
 
             // Triangle 1
-            Vec3D vec1 = new Vec3D(100.0f, -100.0f,  100.0f);
-            Vec3D vec2 = new Vec3D(100.0f, -100.0f, -100.0f);
-            Vec3D vec3 = new Vec3D(100.0f,  100.0f,  -100.0f);
-            Vec3D vec4 = new Vec3D(100.0f,  100.0f,   100.0f);
+            Vec3D vec1 = new Vec3D(-100.0f,  -100.0f,   100.0f);
+            Vec3D vec2 = new Vec3D( 100.0f,  -100.0f,   100.0f);
+            Vec3D vec3 = new Vec3D( 100.0f,   100.0f,   100.0f);
+            Vec3D vec4 = new Vec3D(-100.0f,   100.0f,   100.0f);
 
-            Vec2D t1 = new Vec2D(100.0f, -100.0f, 100.0f);
-            Vec2D t2 = new Vec2D(100.0f, -100.0f, -100.0f);
-            Vec2D t3 = new Vec2D(100.0f, 100.0f, -100.0f);
-            Vec2D t4 = new Vec2D(100.0f, 100.0f, 100.0f);
+            Vec2D t1 = new Vec2D(-100.0f,  -100.0f,  100.0f);
+            Vec2D t2 = new Vec2D( 100.0f,  -100.0f, -100.0f);
+            Vec2D t3 = new Vec2D( 100.0f,   100.0f, -100.0f);
+            Vec2D t4 = new Vec2D(-100.0f,   100.0f,  100.0f);
 
             Pixel pixel1 = new Pixel(255, 0, 0);
-            Pixel pixel2 = new Pixel(255, 0, 0);
-            Pixel pixel3 = new Pixel(255, 0, 0);
+            Pixel pixel2 = new Pixel(0, 255, 0);
+            Pixel pixel3 = new Pixel(0, 0, 255);
             Pixel pixel4 = new Pixel(255, 0, 0);
 
             Triangle tri1 = new Triangle();
@@ -65,7 +65,8 @@ namespace MathLibraryDriver
             tri2.col[2] = pixel4;
 
             ObjectList.Add(tri1);
-            ObjectList.Add(tri2);
+
+           // ObjectList.Add(tri2);
 
             Pipeline = new DrawingPipeline(MainCanvas);
 
@@ -74,7 +75,7 @@ namespace MathLibraryDriver
 
             Pipeline.SetTransform(transform);
 
-            CameraPos = new Vec3D(0.0f, 0.0f, -1250.0f);
+            CameraPos = new Vec3D(0.0f, 0.0f, -250.0f);
             CameraTarget = new Vec3D(0.0f, 0.0f, 0.0f);
             CameraUp = new Vec3D(0.0f, 1.0f, 0.0f);
             Pipeline.SetCamera(CameraPos, CameraTarget, CameraUp);
