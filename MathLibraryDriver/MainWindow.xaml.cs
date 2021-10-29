@@ -32,14 +32,14 @@ namespace MathLibraryDriver
             Vec3D vec4 = new Vec3D(-100.0f,   100.0f,   100.0f);
 
             Vec2D t1 = new Vec2D(-100.0f,  -100.0f,  100.0f);
-            Vec2D t2 = new Vec2D( 100.0f,  -100.0f, -100.0f);
-            Vec2D t3 = new Vec2D( 100.0f,   100.0f, -100.0f);
+            Vec2D t2 = new Vec2D( 100.0f,  -100.0f,  100.0f);
+            Vec2D t3 = new Vec2D( 100.0f,   100.0f,  100.0f);
             Vec2D t4 = new Vec2D(-100.0f,   100.0f,  100.0f);
 
             Pixel pixel1 = new Pixel(255, 0, 0);
             Pixel pixel2 = new Pixel(0, 255, 0);
             Pixel pixel3 = new Pixel(0, 0, 255);
-            Pixel pixel4 = new Pixel(255, 0, 0);
+            Pixel pixel4 = new Pixel(0, 0, 0);
 
             Triangle tri1 = new Triangle();
             tri1.p[0] = vec1;
@@ -66,7 +66,7 @@ namespace MathLibraryDriver
 
             ObjectList.Add(tri1);
 
-           // ObjectList.Add(tri2);
+            //ObjectList.Add(tri2);
 
             Pipeline = new DrawingPipeline(MainCanvas);
 
