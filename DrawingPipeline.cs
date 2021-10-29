@@ -159,7 +159,7 @@ namespace MathLibrary
  //           List<Triangle> vecTrianglesToRaster;
 
             int nTriangleDrawnCount = 0;
-            DrawingHelpers.DrawLine_ColorGradient(m_CanvasContext, 0, 0, 400, 400, Brushes.Red, Brushes.Blue);
+           // DrawingHelpers.DrawLine_ColorGradient(m_CanvasContext, 0, 0, 400, 400, Brushes.Red, Brushes.Blue);
             //   DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triangles[0].p[0].X, triangles[0].p[0].Y, triangles[0].p[1].X, triangles[0].p[1].Y, triangles[0].p[2].X, triangles[0].p[2].Y, Brushes.Black, Brushes.Black);
 
 //            List<Triangle> listTriangles = new List<Triangle>();
