@@ -66,7 +66,7 @@ namespace MathLibraryDriver
 
             ObjectList.Add(tri1);
 
-            //ObjectList.Add(tri2);
+            ObjectList.Add(tri2);
 
             Pipeline = new DrawingPipeline(MainCanvas);
 

@@ -66,7 +66,6 @@ namespace MathLibrary
                 g = green;
                 b = blue;
                 a = alpha;
-
             }
         }
 
@@ -103,6 +102,8 @@ namespace MathLibrary
         readonly Pixel BLANK = new Pixel(0, 0, 0, 0);
 
 
+        private static float[] m_DepthBuffer;
+
         float NearPlane { get; set; } = 0.1f;
         float FarPlane { get; set; } = 100.0f;
         /// <summary>
@@ -138,8 +139,6 @@ namespace MathLibrary
             matWorld = transform;
         }
 
-
-
         public int Render(List<Triangle> triangles, RENDERFLAGS flags = RENDERFLAGS.RENDER_CULL_CW | RENDERFLAGS.RENDER_TEXTURED | RENDERFLAGS.RENDER_DEPTH)
         {
             return Render(triangles, flags, 0, triangles.Count);
@@ -155,14 +154,7 @@ namespace MathLibrary
             // Calculate Transformation MAtrix
             Mat4x4 matWorldView = MathOps.Mat_MultiplyMatrix(matWorld, matView);
 
-            // Store triangles for rastering later
- //           List<Triangle> vecTrianglesToRaster;
-
             int nTriangleDrawnCount = 0;
-           // DrawingHelpers.DrawLine_ColorGradient(m_CanvasContext, 0, 0, 400, 400, Brushes.Red, Brushes.Blue);
-            //   DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triangles[0].p[0].X, triangles[0].p[0].Y, triangles[0].p[1].X, triangles[0].p[1].Y, triangles[0].p[2].X, triangles[0].p[2].Y, Brushes.Black, Brushes.Black);
-
-//            List<Triangle> listTriangles = new List<Triangle>();
 
             //Process Triangles
             for (int tx = 0; tx < triangles.Count; tx++)
@@ -193,134 +185,83 @@ namespace MathLibrary
                 normal = MathOps.Vec_Normalize(normal);
 
                 // Cull triangles that face away from viewer
-                //if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) > 0.0f)) continue;
-                //if (flags.HasFlag(RENDERFLAGS.RENDER_CULL_CCW) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) < 0.0f)) continue;
+                if (((flags & RENDERFLAGS.RENDER_CULL_CW) == flags) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) > 0.0f)) continue;
+                if (((flags & RENDERFLAGS.RENDER_CULL_CCW) == flags) && (MathOps.Vec_DotProduct(normal, triTransformed.p[0]) < 0.0f)) continue;
 
+                // If lighting, calculate shading
+                if ((flags & RENDERFLAGS.RENDER_LIGHTS) == flags)
+                {
+                    Pixel ambient_clamp = new Pixel(0, 0, 0, 1);
+                    Pixel light_combined = new Pixel(0, 0, 0, 1);
+                    int nLightSources = 0;
+                    float nLightR = 0;
+                    float nLightG = 0;
+                    float nLightB = 0;
 
+                    for (int i = 0; i < 4; i++)
+                    {
+                        switch (lights[i].type)
+                        {
+                            case LightsType.LIGHT_DISABLED:
+                                break;
+                            case LightsType.LIGHT_AMBIENT:
+                                ambient_clamp = lights[i].col;
+                                break;
+                            case LightsType.LIGHT_DIRECTIONAL:
+                                {
+                                    nLightSources++;
+                                    Vec3D light_dir = MathOps.Vec_Normalize(lights[i].dir);
+                                    float light = MathOps.Vec_DotProduct(light_dir, normal);
 
+                                    light = Math.Max(light, 0.0f);
+                                    nLightR += light * (lights[i].col.r / 255.0f);
+                                    nLightG += light * (lights[i].col.g / 255.0f);
+                                    nLightB += light * (lights[i].col.b / 255.0f);
+                                }
+                                break;
+                            case LightsType.LIGHT_POINT:
+                                break;
+                        }
+                    }
 
-                //// If lighting, calculate shading
-                //if (flags.HasFlag(RENDERFLAGS.RENDER_LIGHTS))
-                //{
-                //    Pixel ambient_clamp = new Pixel(0, 0, 0, 1);
-                //    Pixel light_combined = new Pixel(0, 0, 0, 1);
-                //    int nLightSources = 0;
-                //    float nLightR = 0;
-                //    float nLightG = 0;
-                //    float nLightB = 0;
+                    nLightR = Math.Max(nLightR, ambient_clamp.r / 255.0f);
+                    nLightG = Math.Max(nLightG, ambient_clamp.g / 255.0f);
+                    nLightB = Math.Max(nLightB, ambient_clamp.b / 255.0f);
 
-                //    for (int i = 0; i < 4; i++)
-                //    {
-                //        switch (lights[i].type)
-                //        {
-                //            case LightsType.LIGHT_DISABLED:
-                //                break;
-                //            case LightsType.LIGHT_AMBIENT:
-                //                ambient_clamp = lights[i].col;
-                //                break;
-                //            case LightsType.LIGHT_DIRECTIONAL:
-                //                {
-                //                    nLightSources++;
-                //                    Vec3D light_dir = MathOps.Vec_Normalize(lights[i].dir);
-                //                    float light = MathOps.Vec_DotProduct(light_dir, normal);
-
-                //                    //if (light > 0)
-                //                    //{
-                //                    //    int j = 0;
-                //                    //}
-
-                //                    light = Math.Max(light, 0.0f);
-                //                    nLightR += light * (lights[i].col.r / 255.0f);
-                //                    nLightG += light * (lights[i].col.g / 255.0f);
-                //                    nLightB += light * (lights[i].col.b / 255.0f);
-                //                }
-                //                break;
-                //            case LightsType.LIGHT_POINT:
-                //                break;
-                //        }
-                //    }
-
-                //    nLightR = Math.Max(nLightR, ambient_clamp.r / 255.0f);
-                //    nLightG = Math.Max(nLightG, ambient_clamp.g / 255.0f);
-                //    nLightB = Math.Max(nLightB, ambient_clamp.b / 255.0f);
-
-                //    triTransformed.col[0] = new Pixel((uint)(nLightR * triTransformed.col[0].r), (uint)(nLightG * triTransformed.col[0].g), (uint)(nLightB * triTransformed.col[0].b));
-                //    triTransformed.col[1] = new Pixel((uint)(nLightR * triTransformed.col[1].r), (uint)(nLightG * triTransformed.col[1].g), (uint)(nLightB * triTransformed.col[1].b));
-                //    triTransformed.col[2] = new Pixel((uint)(nLightR * triTransformed.col[2].r), (uint)(nLightG * triTransformed.col[2].g), (uint)(nLightB * triTransformed.col[2].b));
-                //}
+                    triTransformed.col[0] = new Pixel((uint)(nLightR * triTransformed.col[0].r), (uint)(nLightG * triTransformed.col[0].g), (uint)(nLightB * triTransformed.col[0].b));
+                    triTransformed.col[1] = new Pixel((uint)(nLightR * triTransformed.col[1].r), (uint)(nLightG * triTransformed.col[1].g), (uint)(nLightB * triTransformed.col[1].b));
+                    triTransformed.col[2] = new Pixel((uint)(nLightR * triTransformed.col[2].r), (uint)(nLightG * triTransformed.col[2].g), (uint)(nLightB * triTransformed.col[2].b));
+                }
 
                 // Now clip the boundaries
                 Console.WriteLine("Going to clipping - triangle #" + tx.ToString());
                 nTriangleDrawnCount += ClipTriangle_ToViewportBoundary(triTransformed, flags);
-
-
-                //               Triangle triProjected = triTransformed;
-
-                //               // Project new triangle
-                //               triProjected.p[0] = MathOps.Mat_MultiplyVector(matProj, triTransformed.p[0]);
-                //               triProjected.p[1] = MathOps.Mat_MultiplyVector(matProj, triTransformed.p[1]);
-                //               triProjected.p[2] = MathOps.Mat_MultiplyVector(matProj, triTransformed.p[2]);
-
-                //               // Apply Projection to Verts
-                //               triProjected.p[0].X = triProjected.p[0].X / triProjected.p[0].W;
-                //               triProjected.p[1].X = triProjected.p[1].X / triProjected.p[1].W;
-                //               triProjected.p[2].X = triProjected.p[2].X / triProjected.p[2].W;
-
-                //               triProjected.p[0].Y = triProjected.p[0].Y / triProjected.p[0].W;
-                //               triProjected.p[1].Y = triProjected.p[1].Y / triProjected.p[1].W;
-                //               triProjected.p[2].Y = triProjected.p[2].Y / triProjected.p[2].W;
-
-                //               triProjected.p[0].Z = triProjected.p[0].Z / triProjected.p[0].W;
-                //               triProjected.p[1].Z = triProjected.p[1].Z / triProjected.p[1].W;
-                //               triProjected.p[2].Z = triProjected.p[2].Z / triProjected.p[2].W;
-
-                //               // Apply Projection to Tex coords
-                //               triProjected.t[0].X = triProjected.t[0].X / triProjected.p[0].W;
-                //               triProjected.t[1].X = triProjected.t[1].X / triProjected.p[1].W;
-                //               triProjected.t[2].X = triProjected.t[2].X / triProjected.p[2].W;
-
-                //               triProjected.t[0].Y = triProjected.t[0].Y / triProjected.p[0].W;
-                //               triProjected.t[1].Y = triProjected.t[1].Y / triProjected.p[1].W;
-                //               triProjected.t[2].Y = triProjected.t[2].Y / triProjected.p[2].W;
-
-                //               triProjected.t[0].Z = 1.0f / triProjected.p[0].W;
-                //               triProjected.t[1].Z = 1.0f / triProjected.p[1].W;
-                //               triProjected.t[2].Z = 1.0f / triProjected.p[2].W;
-
-                //               DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triProjected.p[0].X, triProjected.p[0].Y, triProjected.p[1].X, triProjected.p[1].Y, triProjected.p[2].X, triProjected.p[2].Y, Brushes.Black, Brushes.Red);
-
-                //               // Add initial triangle
-                ////               listTriangles.Add(triProjected);
             }
-
-
-            //foreach (Triangle triRaster in listTriangles)
-            //{
-            //    // Scale to viewport
-            //    Vec3D vOffsetView = new Vec3D(1, 1, 0);
-            //    triRaster.p[0] = MathOps.Vec_Add(triRaster.p[0], vOffsetView);
-            //    triRaster.p[1] = MathOps.Vec_Add(triRaster.p[1], vOffsetView);
-            //    triRaster.p[2] = MathOps.Vec_Add(triRaster.p[2], vOffsetView);
-            //    triRaster.p[0].X *= 0.5f * fViewW;
-            //    triRaster.p[0].Y *= 0.5f * fViewH;
-            //    triRaster.p[1].X *= 0.5f * fViewW;
-            //    triRaster.p[1].Y *= 0.5f * fViewH;
-            //    triRaster.p[2].X *= 0.5f * fViewW;
-            //    triRaster.p[2].Y *= 0.5f * fViewH;
-            //    vOffsetView = new Vec3D(fViewX, fViewY, 0);
-            //    triRaster.p[0] = MathOps.Vec_Add(triRaster.p[0], vOffsetView);
-            //    triRaster.p[1] = MathOps.Vec_Add(triRaster.p[1], vOffsetView);
-            //    triRaster.p[2] = MathOps.Vec_Add(triRaster.p[2], vOffsetView);
-
-            //    DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triRaster.p[0].X, triRaster.p[0].Y, triRaster.p[1].X, triRaster.p[1].Y, triRaster.p[2].X, triRaster.p[2].Y, Brushes.Green, Brushes.Red);
-
-
 
             //}
             Console.WriteLine(nTriangleDrawnCount.ToString() + " triangles were drawn!");
             return nTriangleDrawnCount;
         }
 
+        /// <summary>
+        /// Clip the drawing objects to our viewport boundary
+        ///                         //
+        // JHA:  Let y be vertical, and x be horizontal.  Calcs assume a bounding box with coordinates as shown:
+        // 
+        //          (-1, 1, 0) ------------------------------------- (1, 1 , 0)
+        //               |                                               |
+        //               |                                               |
+        //               |                                               |
+        //               |                                               |
+        //               |                                               |
+        //          (-1, -1, 0) ------------------------------------- (1, -1, 0)
+        //
+        //         1st term:  "plane_n" is the normal vector of each line in the rectangle pointing to the interior of the rectangle
+        //         2nd term:  "plane_p" is the point on the clipping plane which is the midpoint of each of the sides of the rectangle. 
+        /// </summary>
+        /// <param name="triangle"></param>
+        /// <param name="flags"></param>
+        /// <returns></returns>
         private int ClipTriangle_ToViewportBoundary(Triangle triangle, RENDERFLAGS flags)
         {
             int nTriangleDrawnCount = 0;
@@ -332,15 +273,10 @@ namespace MathLibrary
 
             // The n_plane should be the Z-plane of the screen <0,0,1>
             nClippedTriangles = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, NearPlane), new Vec3D(0.0f, 0.0f, 1.0f), triangle, ref clipped[0], ref clipped[1]);
-            Console.WriteLine("After clipping -- " + (nClippedTriangles-1).ToString() + " triangles need to be clipped");
-            Console.WriteLine(" -- 1st p[0]:  " + clipped[0].p[0].X + ", " + clipped[0].p[0].Y + ", " + clipped[0].p[0].Z);
-            Console.WriteLine(" -- 1st p[1]:  " + clipped[0].p[1].X + ", " + clipped[0].p[1].Y + ", " + clipped[0].p[1].Z);
-            Console.WriteLine(" -- 1st p[2]:  " + clipped[0].p[2].X + ", " + clipped[0].p[2].Y + ", " + clipped[0].p[2].Z);
 
             // This may yield two new triangles
             for (int n = 0; n < nClippedTriangles; n++)
             {
-                Console.WriteLine("Clipping triangle #" + n.ToString() + " now");
                 Triangle triProjected = clipped[n];
 
                 // Project new triangle
@@ -395,7 +331,6 @@ namespace MathLibrary
                     {
                         sclipped[0] = new Triangle();
                         sclipped[1] = new Triangle();
-                        //Console.WriteLine("Count: " + nNewTriangles.ToString());
 
                         // Take triangle from front of queue
                         Triangle test = listTriangles[0];
@@ -409,45 +344,30 @@ namespace MathLibrary
                         // as all triangles after a plane clip are guaranteed
                         // to lie on the inside of the plane. I like how this
                         // comment is almost completely and utterly justified
+
                         switch (p)
                         {
                             case 0:
                                 {
                                     nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, -1.0f, 0.0f), new Vec3D(0.0f, 1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
-                                    Console.WriteLine(" -- 0: sclipped 1st p[0]:  " + sclipped[0].p[0].X + ", " + sclipped[0].p[0].Y + ", " + sclipped[0].p[0].Z);
-                                    Console.WriteLine(" -- 0: sclipped 1st p[1]:  " + sclipped[0].p[1].X + ", " + sclipped[0].p[1].Y + ", " + sclipped[0].p[1].Z);
-                                    Console.WriteLine(" -- 0: sclipped 1st p[2]:  " + sclipped[0].p[2].X + ", " + sclipped[0].p[2].Y + ", " + sclipped[0].p[2].Z);
                                     break;
                                 }
                             case 1:
                                 {
                                     nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, +1.0f, 0.0f), new Vec3D(0.0f, -1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
-                                    Console.WriteLine(" -- 1: sclipped 1st p[0]:  " + sclipped[0].p[0].X + ", " + sclipped[0].p[0].Y + ", " + sclipped[0].p[0].Z);
-                                    Console.WriteLine(" -- 1: sclipped 1st p[1]:  " + sclipped[0].p[1].X + ", " + sclipped[0].p[1].Y + ", " + sclipped[0].p[1].Z);
-                                    Console.WriteLine(" -- 1: sclipped 1st p[2]:  " + sclipped[0].p[2].X + ", " + sclipped[0].p[2].Y + ", " + sclipped[0].p[2].Z);
                                     break;
                                 }
                             case 2:
                                 {
                                     nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(-1.0f, 0.0f, 0.0f), new Vec3D(1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
-                                    Console.WriteLine(" -- 2: sclipped 1st p[0]:  " + sclipped[0].p[0].X + ", " + sclipped[0].p[0].Y + ", " + sclipped[0].p[0].Z);
-                                    Console.WriteLine(" -- 2: sclipped 1st p[1]:  " + sclipped[0].p[1].X + ", " + sclipped[0].p[1].Y + ", " + sclipped[0].p[1].Z);
-                                    Console.WriteLine(" -- 2: sclipped 1st p[2]:  " + sclipped[0].p[2].X + ", " + sclipped[0].p[2].Y + ", " + sclipped[0].p[2].Z);
                                     break;
                                 }
                             case 3:
                                 {
                                     nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(+1.0f, 0.0f, 0.0f), new Vec3D(-1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
-                                    Console.WriteLine(" -- 3: sclipped 1st p[0]:  " + sclipped[0].p[0].X + ", " + sclipped[0].p[0].Y + ", " + sclipped[0].p[0].Z);
-                                    Console.WriteLine(" -- 3: sclipped 1st p[1]:  " + sclipped[0].p[1].X + ", " + sclipped[0].p[1].Y + ", " + sclipped[0].p[1].Z);
-                                    Console.WriteLine(" -- 3: sclipped 1st p[2]:  " + sclipped[0].p[2].X + ", " + sclipped[0].p[2].Y + ", " + sclipped[0].p[2].Z);
                                     break;
                                 }
                         }
-
-//                        RasterSingleTriangle(test);
-//                        DrawingHelpers.DrawTriangleFilled(m_CanvasContext, test.p[0].X, test.p[0].Y, test.p[1].X, test.p[1].Y, test.p[2].X, test.p[2].Y, Brushes.Green, Brushes.Green);
-
 
                         // Clipping may yield a variable number of triangles, so
                         // add these new ones to the back of the queue for subsequent
@@ -456,21 +376,19 @@ namespace MathLibrary
                         {
                             listTriangles.Add(sclipped[w]);
                         }
-
                     }
 
                     nNewTriangles = listTriangles.Count;
                 }
 
-                RasterTriangles(listTriangles);
-  //              Console.WriteLine("After raster list");
+                RasterTriangles(listTriangles, flags);
                 nTriangleDrawnCount++;
 
             }
             return nTriangleDrawnCount;
         }
 
-        private void RasterSingleTriangle(Triangle triRaster)
+        private void RasterSingleTriangle(Triangle triRaster, RENDERFLAGS flags)
         {
             // Scale to viewport
             Vec3D vOffsetView = new Vec3D(1, 1, 0);
@@ -489,18 +407,9 @@ namespace MathLibrary
             triRaster.p[2] = MathOps.Vec_Add(triRaster.p[2], vOffsetView);
 
             // For now, just draw triangle
-            Console.WriteLine("drawing triangle");
-
-            //SolidColorBrush br = new SolidColorBrush(Color.FromArgb((byte)255, (byte)255, (byte)255, (byte)255));
-
             SolidColorBrush br0 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[0].a, (byte)triRaster.col[0].r, (byte)triRaster.col[0].g, (byte)triRaster.col[0].b));
             SolidColorBrush br1 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[1].a, (byte)triRaster.col[1].r, (byte)triRaster.col[1].g, (byte)triRaster.col[1].b));
             SolidColorBrush br2 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[2].a, (byte)triRaster.col[2].r, (byte)triRaster.col[2].g, (byte)triRaster.col[2].b));
-
-            DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triRaster.p[0].X, triRaster.p[0].Y, triRaster.p[1].X, triRaster.p[1].Y, triRaster.p[2].X, triRaster.p[2].Y, Brushes.Green, br0, br1, br2);
-
-            Console.WriteLine("after triangle drawn");
-
 
             //if (flags & RENDER_TEXTURED)
             //{/*
@@ -518,29 +427,36 @@ namespace MathLibrary
 
             //}
 
+            if ((flags & RENDERFLAGS.RENDER_WIRE) == flags)
+            {
+                DrawTriangleWire(triRaster, BLACK);
+            }
 
+            if ((flags & RENDERFLAGS.RENDER_FLAT) == flags)
+            {
+                DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triRaster.p[0].X, triRaster.p[0].Y, triRaster.p[1].X, triRaster.p[1].Y, triRaster.p[2].X, triRaster.p[2].Y, Brushes.Green, br0, br0, br0);
+            }
+            if ((flags & RENDERFLAGS.RENDER_TEXTURED) == flags)
+            {
+                DrawTriangleTex(triRaster, BLACK);
+            } else 
+            {
+                DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triRaster.p[0].X, triRaster.p[0].Y, triRaster.p[1].X, triRaster.p[1].Y, triRaster.p[2].X, triRaster.p[2].Y, Brushes.Green, br0, br1, br2);
 
-            //if (flags.HasFlag(RENDERFLAGS.RENDER_WIRE))
-            //{
-            //    DrawTriangleWire(triRaster, RED);
-            //}
-            //else
-            //{
-            //    throw new NotImplementedException("Unable to raster triangle in Render()");
             //    //RasterTriangle(
             //    //    (int)triRaster.p[0].X, (int)triRaster.p[0].Y, triRaster.t[0].X, triRaster.t[0].Y, triRaster.t[0].Z, triRaster.col[0],
             //    //    (int)triRaster.p[1].X, (int)triRaster.p[1].Y, triRaster.t[1].X, triRaster.t[1].Y, triRaster.t[1].Z, triRaster.col[1],
             //    //    (int)triRaster.p[2].X, (int)triRaster.p[2].Y, triRaster.t[2].X, triRaster.t[2].Y, triRaster.t[2].Z, triRaster.col[2],
             //    //    sprTexture, flags);
 
-            //}
+            }
         }
 
-        public void RasterTriangles (List<Triangle> listTriangles)
+        public void RasterTriangles (List<Triangle> listTriangles, RENDERFLAGS flags)
         {
             foreach (Triangle tri in listTriangles)
             {
-                RasterSingleTriangle(tri);
+                RasterSingleTriangle(tri, flags);
             }
         }
         //public UInt32 RenderLine(Vec3D p1, Vec3D p2, Pixel col)
@@ -614,14 +530,23 @@ namespace MathLibrary
             int x3, int y3, float u3, float v3, float w3, Pixel c3, UInt32 nFlags)
         { }
 
-        private static float[] m_DepthBuffer;
-
-
-
         public void DrawTriangle(double x1, double y1, double x2, double y2, double x3, double y3, Pixel p)
         {
             SolidColorBrush stroke = new SolidColorBrush(Color.FromArgb((byte)p.a, (byte)p.r, (byte)p.g, (byte)p.b));
             DrawingHelpers.DrawTriangle(m_CanvasContext, x1, y1, x2, y2, x3, y3, stroke);
+        }
+
+        /// <summary>
+        /// Wrapper function that returns an interpolated Pixel color
+        /// </summary>
+        /// <param name="p">percentage value to interpolate (0 < p < 1.0)</param>
+        /// <param name="pixel1">pixel of the first node</param>
+        /// <param name="pixel2">pixel of the second node</param>
+        /// <returns></returns>
+        public static Pixel InterpolateColors_ToPixel(float p, Pixel pixel1, Pixel pixel2)
+        {
+            // interpolate the colors using DrawingHelpers color interpolation function.
+            return DrawingHelpers.InterpolateColors(p, pixel1.ToBrush(), pixel2.ToBrush()).ToPixel();
         }
     }
 }
