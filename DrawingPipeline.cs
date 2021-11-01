@@ -586,7 +586,13 @@ namespace MathLibrary
             if ((flags & RENDERFLAGS.RENDER_TEXTURED) == flags)
             {
                 DrawTriangleTex(triRaster, BLACK);
-            } else 
+            } 
+            
+            if((flags & RENDERFLAGS.RENDER_DEPTH) == flags)
+            {
+
+            }
+            else 
             {
                 DrawingHelpers.DrawTriangleFilled(m_CanvasContext, triRaster.p[0].X, triRaster.p[0].Y, triRaster.p[1].X, triRaster.p[1].Y, triRaster.p[2].X, triRaster.p[2].Y, Brushes.Green, br0, br1, br2);
 

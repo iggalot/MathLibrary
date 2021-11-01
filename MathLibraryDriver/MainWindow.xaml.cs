@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Media;
 using static MathLibrary.DrawingPipeline;
 using static MathLibrary.MathVectors;
 
@@ -32,17 +33,26 @@ namespace MathLibraryDriver
             Vec3D vec2 = new Vec3D( 100.0f,  -100.0f,   100.0f);
             Vec3D vec3 = new Vec3D( 100.0f,   100.0f,   100.0f);
             Vec3D vec4 = new Vec3D(-100.0f,   100.0f,   100.0f);
+            Vec3D vec5 = new Vec3D(-100.0f, -100.0f, -100.0f);
+            Vec3D vec6 = new Vec3D(100.0f, -100.0f, -100.0f);
+            Vec3D vec7 = new Vec3D(100.0f, 100.0f, -100.0f);
+            Vec3D vec8 = new Vec3D(-100.0f, 100.0f, -100.0f);
 
             Vec2D t1 = new Vec2D(-100.0f,  -100.0f,  100.0f);
             Vec2D t2 = new Vec2D( 100.0f,  -100.0f,  100.0f);
             Vec2D t3 = new Vec2D( 100.0f,   100.0f,  100.0f);
             Vec2D t4 = new Vec2D(-100.0f,   100.0f,  100.0f);
+            Vec2D t5 = new Vec2D(-100.0f, -100.0f, -100.0f);
+            Vec2D t6 = new Vec2D(100.0f, -100.0f, -100.0f);
+            Vec2D t7 = new Vec2D(100.0f, 100.0f, -100.0f);
+            Vec2D t8 = new Vec2D(-100.0f, 100.0f, -100.0f);
 
             Pixel pixel1 = new Pixel(255, 0, 0);
             Pixel pixel2 = new Pixel(0, 255, 0);
             Pixel pixel3 = new Pixel(0, 0, 255);
             Pixel pixel4 = new Pixel(0, 0, 0);
 
+            // Triangle 1
             TriangleObject tri1 = new TriangleObject();
             tri1.p[0] = vec1;
             tri1.p[1] = vec2;
@@ -54,6 +64,7 @@ namespace MathLibraryDriver
             tri1.col[1] = pixel2;
             tri1.col[2] = pixel3;
 
+            // Triangle 2
             TriangleObject tri2 = new TriangleObject();
             tri2.p[0] = vec1;
             tri2.p[1] = vec3;
@@ -131,6 +142,8 @@ namespace MathLibraryDriver
         private void OnUserUpdate()
         {
             Pipeline.Render(TriangleList, LineList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE);
+
+            //DrawingHelpersLibrary.DrawingHelpers.DrawPixel(MainCanvas, 10, 200, Brushes.Black);
         }
     }
 }
