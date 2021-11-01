@@ -139,19 +139,169 @@ namespace MathLibrary
             matWorld = transform;
         }
 
-        public int Render(List<Triangle> triangles, RENDERFLAGS flags = RENDERFLAGS.RENDER_CULL_CW | RENDERFLAGS.RENDER_TEXTURED | RENDERFLAGS.RENDER_DEPTH)
+        public int RenderLine(List<LineObject> lines, RENDERFLAGS flags = RENDERFLAGS.RENDER_DEPTH)
         {
-            return Render(triangles, flags, 0, triangles.Count);
+            return RenderLine(lines, flags, 0, lines.Count);
         }
 
-        public int Render(List<Triangle> triangles, RENDERFLAGS flags, int nOffset, int nCount)
+        public int RenderLine(List<LineObject> lines, RENDERFLAGS flags, int nOffset, int nCount)
+        {
+            Console.WriteLine(lines.Count.ToString() + " lines were sent to render!");
+
+            // Calculate the Transformation Matrix
+            Mat4x4 matWorldView = MathOps.Mat_MultiplyMatrix(matWorld, matView);
+
+            int nLineDrawnCount = 0;
+
+            // Process Lines
+            for (int tx = 0; tx < lines.Count; tx++)
+            {
+                LineObject line = lines[tx];
+                LineObject lineTransformed = new LineObject();
+
+                // Copy end point colors
+                lineTransformed.col[0] = line.col[0];
+                lineTransformed.col[1] = line.col[1];
+
+                // Transform line from object (world) space into projected space
+                lineTransformed.p[0] = MathOps.Mat_MultiplyVector(matWorldView, line.p[0]);
+                lineTransformed.p[1] = MathOps.Mat_MultiplyVector(matWorldView, line.p[1]);
+
+                // Now clip the boundaries
+                nLineDrawnCount += ClipLine_ToViewportBoundary(lineTransformed, flags);
+            }
+
+            return nLineDrawnCount;
+        }
+
+        private int ClipLine_ToViewportBoundary(LineObject line, RENDERFLAGS flags)
+        {
+            int nLineDrawnCount = 0;
+            // Clip line against near plane
+            int nClippedLines = 0;
+            LineObject clipped = new LineObject();
+
+            // The n_plane should be the Z-plane of the screen <0,0,1>
+            nClippedLines = MathOps.Line_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, NearPlane), new Vec3D(0.0f, 0.0f, 1.0f), line, ref clipped);
+
+            for (int n = 0; n < nClippedLines; n++)
+            {
+                LineObject lineProjected = clipped;
+
+                // Project the new lines end points
+                lineProjected.p[0] = MathOps.Mat_MultiplyVector(matProj, clipped.p[0]);
+                lineProjected.p[1] = MathOps.Mat_MultiplyVector(matProj, clipped.p[1]);
+
+                // Apply Projection to end points and scale to homogeneous units (dividing by W coeff) to get screen space coordinates
+                lineProjected.p[0].X = lineProjected.p[0].X / lineProjected.p[0].W;
+                lineProjected.p[1].X = lineProjected.p[1].X / lineProjected.p[1].W;
+
+                lineProjected.p[0].Y = lineProjected.p[0].Y / lineProjected.p[0].W;
+                lineProjected.p[1].Y = lineProjected.p[1].Y / lineProjected.p[1].W;
+
+                lineProjected.p[0].Z = lineProjected.p[0].Z / lineProjected.p[0].W;
+                lineProjected.p[1].Z = lineProjected.p[1].Z / lineProjected.p[1].W;
+
+                // Clip against viewport in screen space
+                // Clip line against all four screen edges
+                LineObject sclipped = new LineObject();
+                List<LineObject> listLines = new List<LineObject>();
+
+                // Add initial triangle
+                listLines.Add(lineProjected);
+
+                int nNewLines = 1;
+
+                for (int p = 0; p < 4; p++)
+                {
+                    int nLinesToAdd = 0;
+                    while (nNewLines > 0)
+                    {
+                        sclipped = new LineObject();
+
+                        // Take triangle from front of queue
+                        LineObject test = listLines[0];
+
+                        // remove it from the queue and subtract from total in the queue
+                        listLines.RemoveAt(0);
+                        nNewLines--;
+
+                        // Clip it against a plane. We only need to test each 
+                        // subsequent plane, against subsequent new triangles
+                        // as all triangles after a plane clip are guaranteed
+                        // to lie on the inside of the plane. I like how this
+                        // comment is almost completely and utterly justified
+
+                        switch (p)
+                        {
+                            case 0:
+                                {
+                                    nLinesToAdd = MathOps.Line_ClipAgainstPlane(new Vec3D(0.0f, -1.0f, 0.0f), new Vec3D(0.0f, 1.0f, 0.0f), test, ref sclipped);
+                                    break;
+                                }
+                            case 1:
+                                {
+                                    nLinesToAdd = MathOps.Line_ClipAgainstPlane(new Vec3D(0.0f, +1.0f, 0.0f), new Vec3D(0.0f, -1.0f, 0.0f), test, ref sclipped);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    nLinesToAdd = MathOps.Line_ClipAgainstPlane(new Vec3D(-1.0f, 0.0f, 0.0f), new Vec3D(1.0f, 0.0f, 0.0f), test, ref sclipped);
+                                    break;
+                                }
+                            case 3:
+                                {
+                                    nLinesToAdd = MathOps.Line_ClipAgainstPlane(new Vec3D(+1.0f, 0.0f, 0.0f), new Vec3D(-1.0f, 0.0f, 0.0f), test, ref sclipped);
+                                    //listLines.Add(sclipped);
+                                    //RasterLines(listLines, flags);
+
+                                    break;
+                                }
+                        }
+
+                        // Add the newly clipped line to the end of the list for the next pass
+                        for (int w = 0; w < nLinesToAdd; w++)
+                        {
+                            listLines.Add(sclipped);
+                        }
+                    }
+
+                    nNewLines = listLines.Count;
+                }
+
+                RasterLines(listLines, flags);
+                nLineDrawnCount++;
+
+            }
+            return nLineDrawnCount;
+        }
+
+        public int Render(List<TriangleObject> TriangleList, List<LineObject> LineList, RENDERFLAGS flags)
+        {
+            int itemsDrawn = 0;
+            // Draw triangle objects
+            itemsDrawn += RenderTriangle(TriangleList, flags, 0, TriangleList.Count);
+
+            // Draw the line objects
+            itemsDrawn += RenderLine(LineList, flags, 0, LineList.Count);
+
+            Console.WriteLine(itemsDrawn.ToString() + " items drawn.");
+            return itemsDrawn = 0;
+        }
+
+        public int RenderTriangle(List<TriangleObject> triangles, RENDERFLAGS flags = RENDERFLAGS.RENDER_CULL_CW | RENDERFLAGS.RENDER_TEXTURED | RENDERFLAGS.RENDER_DEPTH)
+        {
+            return RenderTriangle(triangles, flags, 0, triangles.Count);
+        }
+
+        public int RenderTriangle(List<TriangleObject> triangles, RENDERFLAGS flags, int nOffset, int nCount)
         {
             // Clear the screen
             m_CanvasContext.Children.Clear();
 
             Console.WriteLine(triangles.Count.ToString() + " triangles were sent to Render!");
 
-            // Calculate Transformation MAtrix
+            // Calculate Transformation Matrix
             Mat4x4 matWorldView = MathOps.Mat_MultiplyMatrix(matWorld, matView);
 
             int nTriangleDrawnCount = 0;
@@ -159,8 +309,8 @@ namespace MathLibrary
             //Process Triangles
             for (int tx = 0; tx < triangles.Count; tx++)
             {
-                Triangle tri = triangles[tx];
-                Triangle triTransformed = new Triangle();
+                TriangleObject tri = triangles[tx];
+                TriangleObject triTransformed = new TriangleObject();
 
                 // Just copy through texture coordinates
                 triTransformed.t[0] = tri.t[0];
@@ -172,7 +322,7 @@ namespace MathLibrary
                 triTransformed.col[1] = tri.col[1];
                 triTransformed.col[2] = tri.col[2];
 
-                // Transform triangle from object into projected space
+                // Transform triangle from object (world) space into projected space
                 triTransformed.p[0] = MathOps.Mat_MultiplyVector(matWorldView, tri.p[0]);
                 triTransformed.p[1] = MathOps.Mat_MultiplyVector(matWorldView, tri.p[1]);
                 triTransformed.p[2] = MathOps.Mat_MultiplyVector(matWorldView, tri.p[2]);
@@ -234,12 +384,9 @@ namespace MathLibrary
                 }
 
                 // Now clip the boundaries
-                Console.WriteLine("Going to clipping - triangle #" + tx.ToString());
                 nTriangleDrawnCount += ClipTriangle_ToViewportBoundary(triTransformed, flags);
             }
 
-            //}
-            Console.WriteLine(nTriangleDrawnCount.ToString() + " triangles were drawn!");
             return nTriangleDrawnCount;
         }
 
@@ -262,14 +409,14 @@ namespace MathLibrary
         /// <param name="triangle"></param>
         /// <param name="flags"></param>
         /// <returns></returns>
-        private int ClipTriangle_ToViewportBoundary(Triangle triangle, RENDERFLAGS flags)
+        private int ClipTriangle_ToViewportBoundary(TriangleObject triangle, RENDERFLAGS flags)
         {
             int nTriangleDrawnCount = 0;
             // Clip triangle against near plane
             int nClippedTriangles = 0;
-            Triangle[] clipped = new Triangle[2];
-            clipped[0] = new Triangle();
-            clipped[1] = new Triangle();
+            TriangleObject[] clipped = new TriangleObject[2];
+            clipped[0] = new TriangleObject();
+            clipped[1] = new TriangleObject();
 
             // The n_plane should be the Z-plane of the screen <0,0,1>
             nClippedTriangles = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, NearPlane), new Vec3D(0.0f, 0.0f, 1.0f), triangle, ref clipped[0], ref clipped[1]);
@@ -277,7 +424,7 @@ namespace MathLibrary
             // This may yield two new triangles
             for (int n = 0; n < nClippedTriangles; n++)
             {
-                Triangle triProjected = clipped[n];
+                TriangleObject triProjected = clipped[n];
 
                 // Project new triangle
                 triProjected.p[0] = MathOps.Mat_MultiplyVector(matProj, clipped[n].p[0]);
@@ -314,10 +461,10 @@ namespace MathLibrary
                 // Clip triangles against all four screen edges, this could yield
                 // a bunch of triangles, so create a queue that we traverse to 
                 //  ensure we only test new triangles generated against planes
-                Triangle[] sclipped = new Triangle[2];
-                sclipped[0] = new Triangle();
-                sclipped[1] = new Triangle();
-                List<Triangle> listTriangles = new List<Triangle>();
+                TriangleObject[] sclipped = new TriangleObject[2];
+                sclipped[0] = new TriangleObject();
+                sclipped[1] = new TriangleObject();
+                List<TriangleObject> listTriangles = new List<TriangleObject>();
 
                 // Add initial triangle
                 listTriangles.Add(triProjected);
@@ -329,11 +476,11 @@ namespace MathLibrary
                     int nTrisToAdd = 0;
                     while (nNewTriangles > 0)
                     {
-                        sclipped[0] = new Triangle();
-                        sclipped[1] = new Triangle();
+                        sclipped[0] = new TriangleObject();
+                        sclipped[1] = new TriangleObject();
 
                         // Take triangle from front of queue
-                        Triangle test = listTriangles[0];
+                        TriangleObject test = listTriangles[0];
 
                         // remove it from the queue and subtract from total in the queue
                         listTriangles.RemoveAt(0);
@@ -388,7 +535,7 @@ namespace MathLibrary
             return nTriangleDrawnCount;
         }
 
-        private void RasterSingleTriangle(Triangle triRaster, RENDERFLAGS flags)
+        private void RasterSingleTriangle(TriangleObject triRaster, RENDERFLAGS flags)
         {
             // Scale to viewport
             Vec3D vOffsetView = new Vec3D(1, 1, 0);
@@ -407,9 +554,9 @@ namespace MathLibrary
             triRaster.p[2] = MathOps.Vec_Add(triRaster.p[2], vOffsetView);
 
             // For now, just draw triangle
-            SolidColorBrush br0 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[0].a, (byte)triRaster.col[0].r, (byte)triRaster.col[0].g, (byte)triRaster.col[0].b));
-            SolidColorBrush br1 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[1].a, (byte)triRaster.col[1].r, (byte)triRaster.col[1].g, (byte)triRaster.col[1].b));
-            SolidColorBrush br2 = new SolidColorBrush(Color.FromArgb((byte)triRaster.col[2].a, (byte)triRaster.col[2].r, (byte)triRaster.col[2].g, (byte)triRaster.col[2].b));
+            Brush br0 = triRaster.col[0].ToBrush();
+            Brush br1 = triRaster.col[1].ToBrush();
+            Brush br2 = triRaster.col[2].ToBrush();
 
             //if (flags & RENDER_TEXTURED)
             //{/*
@@ -452,13 +599,43 @@ namespace MathLibrary
             }
         }
 
-        public void RasterTriangles (List<Triangle> listTriangles, RENDERFLAGS flags)
+        public void RasterTriangles (List<TriangleObject> listTriangles, RENDERFLAGS flags)
         {
-            foreach (Triangle tri in listTriangles)
+            foreach (TriangleObject tri in listTriangles)
             {
                 RasterSingleTriangle(tri, flags);
             }
         }
+
+        public void RasterLines (List<LineObject> listLines, RENDERFLAGS flags)
+        {
+            foreach (LineObject line in listLines)
+            {
+                RasterSingleLine(line, flags);
+            }
+        }
+
+        private void RasterSingleLine(LineObject lineRaster, RENDERFLAGS flags)
+        {
+            // Scale to viewport
+            Vec3D vOffsetView = new Vec3D(1, 1, 0);
+            lineRaster.p[0] = MathOps.Vec_Add(lineRaster.p[0], vOffsetView);
+            lineRaster.p[1] = MathOps.Vec_Add(lineRaster.p[1], vOffsetView);
+            lineRaster.p[0].X *= 0.5f * fViewW;
+            lineRaster.p[0].Y *= 0.5f * fViewH;
+            lineRaster.p[1].X *= 0.5f * fViewW;
+            lineRaster.p[1].Y *= 0.5f * fViewH;
+            vOffsetView = new Vec3D(fViewX, fViewY, 0);
+            lineRaster.p[0] = MathOps.Vec_Add(lineRaster.p[0], vOffsetView);
+            lineRaster.p[1] = MathOps.Vec_Add(lineRaster.p[1], vOffsetView);
+
+            // For now, just draw the line
+            SolidColorBrush br0 = (SolidColorBrush)lineRaster.col[0].ToBrush();
+            SolidColorBrush br1 = (SolidColorBrush)lineRaster.col[1].ToBrush();
+
+            DrawLineObject(lineRaster, br0.ToPixel(), br1.ToPixel());
+        }
+
         //public UInt32 RenderLine(Vec3D p1, Vec3D p2, Pixel col)
         //{
 
@@ -491,7 +668,7 @@ namespace MathLibrary
             }
         }
 
-        public static void AddTriangleToScene(Triangle tri)
+        public static void AddTriangleToScene(TriangleObject tri)
         {
 
         }
@@ -501,19 +678,23 @@ namespace MathLibrary
 
         }
 
-        public void DrawTriangleFlat(Triangle tri)
+        public void DrawTriangleFlat(TriangleObject tri)
         {
             SolidColorBrush stroke = new SolidColorBrush(Color.FromArgb((byte)tri.col[0].a, (byte)tri.col[0].r, (byte)tri.col[0].g, (byte)tri.col[0].b));
             DrawingHelpers.DrawTriangleFilled(m_CanvasContext, tri.p[0].X, tri.p[0].Y, tri.p[1].X, tri.p[1].Y, tri.p[2].X, tri.p[2].Y, stroke, stroke, stroke, stroke);
         }
 
-        public void DrawTriangleWire(Triangle tri, Pixel col)
+        public void DrawTriangleWire(TriangleObject tri, Pixel col)
         {
-            SolidColorBrush stroke = new SolidColorBrush(Color.FromArgb((byte)col.a, (byte)col.r, (byte)col.g, (byte)col.b));
-            DrawingHelpers.DrawTriangle(m_CanvasContext, tri.p[0].X, tri.p[0].Y, tri.p[1].X, tri.p[1].Y, tri.p[2].X, tri.p[2].Y, stroke);
+            DrawingHelpers.DrawTriangle(m_CanvasContext, tri.p[0].X, tri.p[0].Y, tri.p[1].X, tri.p[1].Y, tri.p[2].X, tri.p[2].Y, col.ToBrush());
         }
 
-        public static void DrawTriangleTex(Triangle tri, Pixel col)
+        public void DrawLineObject(LineObject line, Pixel col1, Pixel col2)
+        {
+            DrawingHelpers.DrawLine_ColorGradient(m_CanvasContext, line.p[0].X, line.p[0].Y, line.p[1].X, line.p[1].Y, col1.ToBrush(), col2.ToBrush());
+        }
+
+        public static void DrawTriangleTex(TriangleObject tri, Pixel col)
         {
             throw new NotImplementedException("In DrawTriangleTex() -- Textured Triangles not supported at this time");
         }

@@ -94,14 +94,14 @@ namespace MathLibrary
             public float M33 { get => m[3, 3]; set { m[3, 3] = value; } }
         }
 
-        public class Triangle
+        public class TriangleObject
         {
             public Vec3D[] p { get; set; } = new Vec3D[3];
             public Vec2D[] t { get; set; } = new Vec2D[3];
 
             public Pixel[] col { get; set; } = new Pixel[3];
 
-            public Triangle()
+            public TriangleObject()
             {
                 p[0] = new Vec3D();
                 p[1] = new Vec3D();
@@ -113,7 +113,20 @@ namespace MathLibrary
                 col[1] = new Pixel(120,120,120);
                 col[2] = new Pixel(120,120,120);
             }
+        }
 
+        public class LineObject
+        {
+            public Vec3D[] p { get; set; } = new Vec3D[2];
+            public Pixel[] col {get; set; } = new Pixel[2];
+
+            public LineObject()
+            {
+                p[0] = new Vec3D();
+                p[1] = new Vec3D();
+                col[0] = new Pixel(120, 120, 120);
+                col[1] = new Pixel(120, 120, 120);
+            }
         }
 
         public static class MathOps
@@ -395,7 +408,17 @@ namespace MathLibrary
                 return (plane_n.X * p.X + plane_n.Y * p.Y + plane_n.Z * p.Z - MathOps.Vec_DotProduct(plane_n, plane_p));
 
             }
-            public static int Triangle_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, Triangle in_tri, ref Triangle out_tri1, ref Triangle out_tri2)
+
+            /// <summary>
+            /// Function to return triangle points that are clipped by a plane.
+            /// </summary>
+            /// <param name="plane_p"></param>
+            /// <param name="plane_n"></param>
+            /// <param name="in_tri"></param>
+            /// <param name="out_tri1"></param>
+            /// <param name="out_tri2"></param>
+            /// <returns></returns>
+            public static int Triangle_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, TriangleObject in_tri, ref TriangleObject out_tri1, ref TriangleObject out_tri2)
             {
                 // Make sure plane normal is indeed normal
                 plane_n = Vec_Normalize(plane_n);
@@ -594,6 +617,116 @@ namespace MathLibrary
                     out_tri2.col[2] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[1]);
 
                     return 2; // Return two newly formed triangles which form a quad
+                }
+
+                return 0;
+            }
+
+            /// <summary>
+            /// Function to return the points where a line object is clipped by a plane.
+            /// </summary>
+            /// <param name="plane_p"></param>
+            /// <param name="plane_n"></param>
+            /// <param name="in_line"></param>
+            /// <param name="out_line"></param>
+            /// <returns></returns>
+            public static int Line_ClipAgainstPlane(Vec3D plane_p, Vec3D plane_n, LineObject in_line, ref LineObject out_line)
+            {
+                // Make sure plane normal is indeed normal
+                plane_n = Vec_Normalize(plane_n);
+
+                out_line.col[0] = in_line.col[0];
+                out_line.col[1] = in_line.col[1];
+
+                // Return signed shortest distance from point to plane, plane normal must be normalised
+                float d0 = dist(plane_p, plane_n, in_line.p[0]);
+                float d1 = dist(plane_p, plane_n, in_line.p[1]);
+
+                Console.WriteLine("d0: " + d0.ToString() + "  d1: " + d1.ToString());
+
+                Vec3D[] inside_pts = new Vec3D[3];
+
+                // Create two temporary storage arrays to classify points either side of plane
+                // If distance sign is positive, point lies on "inside" of plane
+                Vec3D[] inside_points = new Vec3D[3]; int nInsidePointCount = 0;
+                Vec3D[] outside_points = new Vec3D[3]; int nOutsidePointCount = 0;
+                Pixel[] inside_color = new Pixel[3]; int nInsideColorCount = 0;
+                Pixel[] outside_color = new Pixel[3]; int nOutsideColorCount = 0;
+
+
+                // For the start point
+                if (d0 >= 0)
+                {
+                    inside_points[nInsidePointCount++] = in_line.p[0];
+                    inside_color[nInsideColorCount++] = in_line.col[0];
+                }
+                else
+                {
+                    outside_points[nOutsidePointCount++] = in_line.p[0];
+                    outside_color[nOutsideColorCount++] = in_line.col[0];
+
+                }
+
+               // For the end point
+                if (d1 >= 0)
+                {
+                    inside_points[nInsidePointCount++] = in_line.p[1];
+                    inside_color[nInsideColorCount++] = in_line.col[1];
+                }
+                else
+                {
+                    outside_points[nOutsidePointCount++] = in_line.p[1];
+                    outside_color[nOutsideColorCount++] = in_line.col[1];
+                }
+
+                // Now classify line points, 
+
+                if (nInsidePointCount == 0)
+                {
+                    Console.WriteLine("Line outside view area -- fully clipped");
+
+                    // All points lie on the outside of plane, so clip whole triangle
+                    // It ceases to exist
+
+                    return 0; // No returned triangles are valid
+                }
+
+                if (nInsidePointCount == 2)
+                {
+                    Console.WriteLine("No clipping");
+
+                    // All points lie on the inside of plane, so do nothing
+                    // and allow the triangle to simply pass through
+                    out_line = in_line;
+
+                    return 1; // Just the one returned original triangle is valid
+                }
+
+                if (nInsidePointCount == 1 && nOutsidePointCount == 1)
+                {
+                    Console.WriteLine("One points clipped");
+
+                    // Triangle should be clipped. As two points lie outside
+                    // the plane, the triangle simply becomes a smaller triangle
+
+                    // Copy appearance info to new triangle
+                    out_line.col[0] = in_line.col[0];
+                    out_line.col[1] = in_line.col[1];
+
+                    // The inside point is valid, so keep that...
+                    out_line.p[0] = inside_points[0];
+                    out_line.col[0] = inside_color[0];
+
+                    // but the second new point is at the locations where the 
+                    // original line intersects with the plane
+
+                    float t;
+                    out_line.p[1] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[0], out t);
+
+                    // Interpolate the color of the 1st point
+                    out_line.col[1] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[0]);
+
+                    return 1; // Return the newly formed line
                 }
 
                 return 0;

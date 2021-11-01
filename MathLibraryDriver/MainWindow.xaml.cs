@@ -13,7 +13,8 @@ namespace MathLibraryDriver
     public partial class MainWindow : Window
     {
         public DrawingPipeline Pipeline { get; set; }
-        List<Triangle> ObjectList { get; set; }
+        List<TriangleObject> TriangleList { get; set; }
+        List<LineObject> LineList { get; set; }
 
         Vec3D CameraPos { get; set; }
         Vec3D CameraTarget { get; set; }
@@ -23,7 +24,8 @@ namespace MathLibraryDriver
         {
             InitializeComponent();
 
-            ObjectList = new List<Triangle>();
+            TriangleList = new List<TriangleObject>();
+            LineList = new List<LineObject>();
 
             // Triangle 1
             Vec3D vec1 = new Vec3D(-100.0f,  -100.0f,   100.0f);
@@ -41,7 +43,7 @@ namespace MathLibraryDriver
             Pixel pixel3 = new Pixel(0, 0, 255);
             Pixel pixel4 = new Pixel(0, 0, 0);
 
-            Triangle tri1 = new Triangle();
+            TriangleObject tri1 = new TriangleObject();
             tri1.p[0] = vec1;
             tri1.p[1] = vec2;
             tri1.p[2] = vec3;
@@ -52,8 +54,7 @@ namespace MathLibraryDriver
             tri1.col[1] = pixel2;
             tri1.col[2] = pixel3;
 
-
-            Triangle tri2 = new Triangle();
+            TriangleObject tri2 = new TriangleObject();
             tri2.p[0] = vec1;
             tri2.p[1] = vec3;
             tri2.p[2] = vec4;
@@ -64,9 +65,16 @@ namespace MathLibraryDriver
             tri2.col[1] = pixel3;
             tri2.col[2] = pixel4;
 
-            ObjectList.Add(tri1);
+            TriangleList.Add(tri1);
+            TriangleList.Add(tri2);
 
-            ObjectList.Add(tri2);
+            LineObject line = new LineObject();
+            line.p[0] = new Vec3D(-100.0f, -100.0f, -100.0f);
+            line.p[1] = new Vec3D(1000.0f, 1000.0f, 1000.0f);
+
+            line.col[0] = new Pixel(0, 0, 255);
+            line.col[1] = new Pixel(255, 0, 0);
+            LineList.Add(line);
 
             Pipeline = new DrawingPipeline(MainCanvas);
 
@@ -82,7 +90,8 @@ namespace MathLibraryDriver
 
             Pipeline.SetProjection(45, ((float)MainCanvas.Width / (float)MainCanvas.Height), 0.1f, 1000, 0.0f, 0.0f, (float) MainCanvas.Width, (float) MainCanvas.Height);
 
-            Pipeline.Render(ObjectList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE, 0, ObjectList.Count);
+            // Perform our rendering.
+            OnUserUpdate();
 
         }
 
@@ -116,9 +125,12 @@ namespace MathLibraryDriver
                 Pipeline.SetCamera(CameraPos, CameraTarget, CameraUp);
             }
 
-            Pipeline.Render(ObjectList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE, 0, ObjectList.Count);
+            OnUserUpdate();
+        }
 
-
+        private void OnUserUpdate()
+        {
+            Pipeline.Render(TriangleList, LineList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE);
         }
     }
 }
