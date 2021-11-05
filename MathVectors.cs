@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static MathLibrary.DrawingPipeline;
+using System.Windows.Media;
 
 namespace MathLibrary
 {
@@ -126,6 +122,31 @@ namespace MathLibrary
                 p[1] = new Vec3D();
                 col[0] = new Pixel(120, 120, 120);
                 col[1] = new Pixel(120, 120, 120);
+            }
+        }
+
+        public class Pixel
+        {
+            public uint r = 0;
+            public uint g = 0;
+            public uint b = 0;
+            public uint a = 0;
+
+            public enum Mode { NORMAL, MASK, ALPHA, CUSTOM }
+
+            public Pixel()
+            {
+                r = 120;
+                b = 120;
+                g = 120;
+                a = 120;
+            }
+            public Pixel(uint red, uint green, uint blue, uint alpha = 0xFF)
+            {
+                r = red;
+                g = green;
+                b = blue;
+                a = alpha;
             }
         }
 
@@ -548,7 +569,7 @@ namespace MathLibrary
                     out_tri1.t[1].Z = t * (outside_tex[0].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
                     // Inteprolate the color of the 1st point
-                    out_tri1.col[1] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[0]);
+                    out_tri1.col[1] = ToPixel(InterpolateColors(t, ToBrush(outside_color[0]), ToBrush(inside_color[0])));
 
                     out_tri1.p[2] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[1], out t);
                     out_tri1.t[2].X = t * (outside_tex[1].X - inside_tex[0].X) + inside_tex[0].X;
@@ -556,7 +577,7 @@ namespace MathLibrary
                     out_tri1.t[2].Z = t * (outside_tex[1].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
                     // Interpolate the color of the 2nd point
-                    out_tri1.col[2] = InterpolateColors_ToPixel(t, outside_color[1], inside_color[0]);
+                    out_tri1.col[2] = ToPixel(InterpolateColors(t, ToBrush(outside_color[1]), ToBrush(inside_color[0])));
 
                     return 1; // Return the newly formed single triangle
                 }
@@ -595,7 +616,7 @@ namespace MathLibrary
                     out_tri1.t[2].Z = t * (outside_tex[0].Z - inside_tex[0].Z) + inside_tex[0].Z;
 
                     // Interpolate the color of the 2nd point
-                    out_tri1.col[2] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[0]);
+                    out_tri1.col[2] = ToPixel(InterpolateColors(t, ToBrush(outside_color[0]), ToBrush(inside_color[0])));
 
                     // The second triangle is composed of one of the inside points, a
                     // new point determined by the intersection of the other side of the 
@@ -614,7 +635,7 @@ namespace MathLibrary
                     out_tri2.t[2].Z = t * (outside_tex[0].Z - inside_tex[1].Z) + inside_tex[1].Z;
 
                     // Interpolate the color of the 2nd point
-                    out_tri2.col[2] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[1]);
+                    out_tri2.col[2] = ToPixel(InterpolateColors(t, ToBrush(outside_color[0]), ToBrush(inside_color[1])));
 
                     return 2; // Return two newly formed triangles which form a quad
                 }
@@ -724,13 +745,61 @@ namespace MathLibrary
                     out_line.p[1] = Vec_IntersectPlane(plane_p, plane_n, inside_points[0], outside_points[0], out t);
 
                     // Interpolate the color of the 1st point
-                    out_line.col[1] = InterpolateColors_ToPixel(t, outside_color[0], inside_color[0]);
-
+                    out_line.col[1] = ToPixel(InterpolateColors(t, ToBrush(outside_color[0]), ToBrush(inside_color[0])));
                     return 1; // Return the newly formed line
                 }
 
                 return 0;
             }
+        }
+
+        /// <summary>
+        /// Interpolates colors based on a percentile where fill2 location is 0% and fill1 location is 100%
+        /// </summary>
+        /// <param name="p">percentile measured from 2nd point</param>
+        /// <param name="fill1">1st point color</param>
+        /// <param name="fill2">2nd point color</param>
+        /// <returns></returns>
+        public static SolidColorBrush InterpolateColors(float p, Brush fill1, Brush fill2)
+        {
+            SolidColorBrush col;
+
+            if (fill2 != fill1)
+            {
+                // RGBA colors for our two vertices
+                float r1 = ((SolidColorBrush)fill1).Color.R;
+                float r2 = ((SolidColorBrush)fill2).Color.R;
+                float g1 = ((SolidColorBrush)fill1).Color.G;
+                float g2 = ((SolidColorBrush)fill2).Color.G;
+                float b1 = ((SolidColorBrush)fill1).Color.B;
+                float b2 = ((SolidColorBrush)fill2).Color.B;
+                float a1 = ((SolidColorBrush)fill1).Color.A;
+                float a2 = ((SolidColorBrush)fill2).Color.A;
+
+                // Interpolate the colors
+                float c23_r = (float)Math.Round(r2 - p * (r2 - r1));
+                float c23_g = (float)Math.Round(g2 - p * (g2 - g1));
+                float c23_b = (float)Math.Round(b2 - p * (b2 - b1));
+                float c23_a = (float)Math.Round(a2 - p * (a2 - a1));
+
+                col = new SolidColorBrush(Color.FromArgb((byte)c23_a, (byte)c23_r, (byte)c23_g, (byte)c23_b));
+            }
+            else
+            {
+                col = (SolidColorBrush)fill1;
+            }
+
+            return col;
+        }
+
+        public static Brush ToBrush(Pixel p)
+        {
+            return new SolidColorBrush(Color.FromArgb((byte)p.a, (byte)p.r, (byte)p.g, (byte)p.b));
+        }
+
+        public static Pixel ToPixel(SolidColorBrush b)
+        {
+            return new Pixel(b.Color.R, b.Color.G, b.Color.B, b.Color.A);
         }
     }
 }

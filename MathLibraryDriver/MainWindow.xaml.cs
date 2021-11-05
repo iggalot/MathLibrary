@@ -1,9 +1,8 @@
-﻿using MathLibrary;
+﻿using DrawingPipeline;
 using System;
 using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Media;
-using static MathLibrary.DrawingPipeline;
+using static DrawingPipeline.BaseDrawingPipeline;
 using static MathLibrary.MathVectors;
 
 namespace MathLibraryDriver
@@ -13,7 +12,7 @@ namespace MathLibraryDriver
     /// </summary>
     public partial class MainWindow : Window
     {
-        public DrawingPipeline Pipeline { get; set; }
+        public BaseDrawingPipeline Pipeline { get; set; }
         List<TriangleObject> TriangleList { get; set; }
         List<LineObject> LineList { get; set; }
 
@@ -25,16 +24,15 @@ namespace MathLibraryDriver
         {
             InitializeComponent();
 
-
             TriangleList = new List<TriangleObject>();
             LineList = new List<LineObject>();
-            Pipeline = new DrawingPipeline(MainCanvas);
+            //Pipeline = new CanvasDrawingPipeline(MainCanvas);
+            Pipeline = new DirectXDrawingPipeline();
 
             OnUserCreate();
 
             // Perform our rendering.
             OnUserUpdate();
-
         }
 
         private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -72,9 +70,7 @@ namespace MathLibraryDriver
 
         private void OnUserUpdate()
         {
-            Pipeline.Render(TriangleList, LineList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE);
-
-            //DrawingHelpersLibrary.DrawingHelpers.DrawPixel(MainCanvas, 10, 200, Brushes.Black);
+            Pipeline.Update(TriangleList, LineList, RENDERFLAGS.RENDER_CULL_CCW | RENDERFLAGS.RENDER_WIRE);
         }
 
         private void OnUserCreate()
@@ -140,7 +136,7 @@ namespace MathLibraryDriver
             // Add to our lists of triangles and lines
             TriangleList.Add(tri1);
             TriangleList.Add(tri2);
-            LineList.Add(line);
+            //LineList.Add(line);
 
             // Create our camera for our view
             CameraPos = new Vec3D(0.0f, 50.0f, -250.0f);
