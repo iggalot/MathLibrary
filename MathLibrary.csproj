@@ -48,11 +48,5 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MathVectors.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DrawingHelpersLibrary\DrawingHelpersLibrary.csproj">
-      <Project>{8b758ae0-4a37-4642-a50f-23f18cb55ba2}</Project>
-      <Name>DrawingHelpersLibrary</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
