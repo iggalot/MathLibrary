@@ -5,6 +5,33 @@ namespace MathLibrary
 {
     public class MathVectors
     {
+
+        // Constants
+        public readonly Pixel GREY = new Pixel(192, 192, 192);
+        public readonly Pixel DARK_GREY = new Pixel(128, 128, 128);
+        public readonly Pixel VERY_DARK_GREY = new Pixel(64, 64, 64);
+        public readonly Pixel RED = new Pixel(255, 0, 0);
+        public readonly Pixel DARK_RED = new Pixel(128, 0, 0);
+        public readonly Pixel VERY_DARK_RED = new Pixel(64, 0, 0);
+        public readonly Pixel YELLOW = new Pixel(255, 255, 0);
+        public readonly Pixel DARK_YELLOW = new Pixel(128, 128, 0);
+        public readonly Pixel VERY_DARK_YELLOW = new Pixel(64, 64, 0);
+        public readonly Pixel GREEN = new Pixel(0, 255, 0);
+        public readonly Pixel DARK_GREEN = new Pixel(0, 128, 0);
+        public readonly Pixel VERY_DARK_GREEN = new Pixel(0, 64, 0);
+        public readonly Pixel CYAN = new Pixel(0, 255, 255);
+        public readonly Pixel DARK_CYAN = new Pixel(0, 128, 128);
+        public readonly Pixel VERY_DARK_CYAN = new Pixel(0, 64, 64);
+        public readonly Pixel BLUE = new Pixel(0, 0, 255);
+        public readonly Pixel DARK_BLUE = new Pixel(0, 0, 128);
+        public readonly Pixel VERY_DARK_BLUE = new Pixel(0, 0, 64);
+        public readonly Pixel MAGENTA = new Pixel(255, 0, 255);
+        public readonly Pixel DARK_MAGENTA = new Pixel(128, 0, 128);
+        public readonly Pixel VERY_DARK_MAGENTA = new Pixel(64, 0, 64);
+        public readonly Pixel WHITE = new Pixel(255, 255, 255);
+        public readonly Pixel BLACK = new Pixel(0, 0, 0);
+        public readonly Pixel BLANK = new Pixel(0, 0, 0, 0);
+
         public class Vec2D
         {
             public Vec2D()
@@ -642,6 +669,151 @@ namespace MathLibrary
 
                 return 0;
             }
+
+            //// <summary>
+            //// Clip the drawing objects to our viewport boundary                      //
+            //// JHA:  Let y be vertical, and x be horizontal.  Calcs assume a bounding box with coordinates as shown:
+            //// 
+            ////          (-1, 1, 0) ------------------------------------- (1, 1 , 0)
+            ////               |                                               |
+            ////               |                                               |
+            ////               |                                               |
+            ////               |                                               |
+            ////               |                                               |
+            ////          (-1, -1, 0) ------------------------------------- (1, -1, 0)
+            ////
+            ////         1st term:  "plane_n" is the normal vector of each line in the rectangle pointing to the interior of the rectangle
+            ////         2nd term:  "plane_p" is the point on the clipping plane which is the midpoint of each of the sides of the rectangle. 
+            //// </summary>
+            //// <param name="triangle"></param>
+            //// <param name="flags"></param>
+            //// <returns></returns>
+            //public int ClipTriangle_ToViewportBoundary(TriangleObject triangle, RENDERFLAGS flags)
+            //{
+            //    int nTriangleDrawnCount = 0;
+            //    // Clip triangle against near plane
+            //    int nClippedTriangles = 0;
+            //    TriangleObject[] clipped = new TriangleObject[2];
+            //    clipped[0] = new TriangleObject();
+            //    clipped[1] = new TriangleObject();
+
+            //    // The n_plane should be the Z-plane of the screen <0,0,1>
+            //    nClippedTriangles = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, 0.0f, NearPlane), new Vec3D(0.0f, 0.0f, 1.0f), triangle, ref clipped[0], ref clipped[1]);
+
+            //    // This may yield two new triangles
+            //    for (int n = 0; n < nClippedTriangles; n++)
+            //    {
+            //        TriangleObject triProjected = clipped[n];
+
+            //        // Project new triangle
+            //        triProjected.p[0] = MathOps.Mat_MultiplyVector(matProj, clipped[n].p[0]);
+            //        triProjected.p[1] = MathOps.Mat_MultiplyVector(matProj, clipped[n].p[1]);
+            //        triProjected.p[2] = MathOps.Mat_MultiplyVector(matProj, clipped[n].p[2]);
+
+            //        // Apply Projection to Verts
+            //        triProjected.p[0].X = triProjected.p[0].X / triProjected.p[0].W;
+            //        triProjected.p[1].X = triProjected.p[1].X / triProjected.p[1].W;
+            //        triProjected.p[2].X = triProjected.p[2].X / triProjected.p[2].W;
+
+            //        triProjected.p[0].Y = triProjected.p[0].Y / triProjected.p[0].W;
+            //        triProjected.p[1].Y = triProjected.p[1].Y / triProjected.p[1].W;
+            //        triProjected.p[2].Y = triProjected.p[2].Y / triProjected.p[2].W;
+
+            //        triProjected.p[0].Z = triProjected.p[0].Z / triProjected.p[0].W;
+            //        triProjected.p[1].Z = triProjected.p[1].Z / triProjected.p[1].W;
+            //        triProjected.p[2].Z = triProjected.p[2].Z / triProjected.p[2].W;
+
+            //        // Apply Projection to Tex coords
+            //        triProjected.t[0].X = triProjected.t[0].X / triProjected.p[0].W;
+            //        triProjected.t[1].X = triProjected.t[1].X / triProjected.p[1].W;
+            //        triProjected.t[2].X = triProjected.t[2].X / triProjected.p[2].W;
+
+            //        triProjected.t[0].Y = triProjected.t[0].Y / triProjected.p[0].W;
+            //        triProjected.t[1].Y = triProjected.t[1].Y / triProjected.p[1].W;
+            //        triProjected.t[2].Y = triProjected.t[2].Y / triProjected.p[2].W;
+
+            //        triProjected.t[0].Z = 1.0f / triProjected.p[0].W;
+            //        triProjected.t[1].Z = 1.0f / triProjected.p[1].W;
+            //        triProjected.t[2].Z = 1.0f / triProjected.p[2].W;
+
+            //        // Clip against viewport in screen space
+            //        // Clip triangles against all four screen edges, this could yield
+            //        // a bunch of triangles, so create a queue that we traverse to 
+            //        //  ensure we only test new triangles generated against planes
+            //        TriangleObject[] sclipped = new TriangleObject[2];
+            //        sclipped[0] = new TriangleObject();
+            //        sclipped[1] = new TriangleObject();
+            //        List<TriangleObject> listTriangles = new List<TriangleObject>();
+
+            //        // Add initial triangle
+            //        listTriangles.Add(triProjected);
+
+            //        int nNewTriangles = 1;
+
+            //        for (int p = 0; p < 4; p++)
+            //        {
+            //            int nTrisToAdd = 0;
+            //            while (nNewTriangles > 0)
+            //            {
+            //                sclipped[0] = new TriangleObject();
+            //                sclipped[1] = new TriangleObject();
+
+            //                // Take triangle from front of queue
+            //                TriangleObject test = listTriangles[0];
+
+            //                // remove it from the queue and subtract from total in the queue
+            //                listTriangles.RemoveAt(0);
+            //                nNewTriangles--;
+
+            //                // Clip it against a plane. We only need to test each 
+            //                // subsequent plane, against subsequent new triangles
+            //                // as all triangles after a plane clip are guaranteed
+            //                // to lie on the inside of the plane. I like how this
+            //                // comment is almost completely and utterly justified
+
+            //                switch (p)
+            //                {
+            //                    case 0:
+            //                        {
+            //                            nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, -1.0f, 0.0f), new Vec3D(0.0f, 1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
+            //                            break;
+            //                        }
+            //                    case 1:
+            //                        {
+            //                            nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(0.0f, +1.0f, 0.0f), new Vec3D(0.0f, -1.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
+            //                            break;
+            //                        }
+            //                    case 2:
+            //                        {
+            //                            nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(-1.0f, 0.0f, 0.0f), new Vec3D(1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
+            //                            break;
+            //                        }
+            //                    case 3:
+            //                        {
+            //                            nTrisToAdd = MathOps.Triangle_ClipAgainstPlane(new Vec3D(+1.0f, 0.0f, 0.0f), new Vec3D(-1.0f, 0.0f, 0.0f), test, ref sclipped[0], ref sclipped[1]);
+            //                            break;
+            //                        }
+            //                }
+
+            //                // Clipping may yield a variable number of triangles, so
+            //                // add these new ones to the back of the queue for subsequent
+            //                // clipping against next planes
+            //                for (int w = 0; w < nTrisToAdd; w++)
+            //                {
+            //                    listTriangles.Add(sclipped[w]);
+            //                }
+            //            }
+
+            //            nNewTriangles = listTriangles.Count;
+            //        }
+
+            //        RasterTriangles(listTriangles, flags);
+            //        nTriangleDrawnCount++;
+
+            //    }
+            //    return nTriangleDrawnCount;
+            //}
+
 
             /// <summary>
             /// Function to return the points where a line object is clipped by a plane.
